@@ -4,6 +4,14 @@ A fully interactive simulation of the systems an **Advanced Metering Infrastruct
 
 ---
 
+## Screenshots
+
+![Dashboard](screenshots/dashboard.png)
+
+![Exception Queue](screenshots/exceptions.png)
+
+---
+
 ## What This Simulates
 
 Real AMI analysts work across multiple interconnected systems: they monitor RF mesh networks, manage meter communication failures, run VEE pipelines, resolve billing exceptions, and coordinate field service responses — all under billing cycle deadlines.
