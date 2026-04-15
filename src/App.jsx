@@ -9,16 +9,24 @@ import VEEEngine from './components/vee/VEEEngine.jsx';
 import ExceptionQueue from './components/exceptions/ExceptionQueue.jsx';
 import CISSystem from './components/cis/CISSystem.jsx';
 import StudyMode from './components/study/StudyMode.jsx';
+import OutageAnalysis from './components/outage/OutageAnalysis.jsx';
+import BillingSLA from './components/billing/BillingSLA.jsx';
+import ReportsModule from './components/reports/ReportsModule.jsx';
+import ShiftHandoff from './components/handoff/ShiftHandoff.jsx';
 
 const NAV_ITEMS = [
-  { id: 'dashboard',  label: 'DASHBOARD',       icon: '▣', desc: 'Operations overview',           group: 'OVERVIEW' },
-  { id: 'rfmesh',     label: 'NETWORK HEALTH',  icon: '◈', desc: 'RF mesh topology & signal',     group: 'DATA COLLECTION' },
-  { id: 'headend',    label: 'DEVICE COMMS',    icon: '⊞', desc: 'Head-end & meter commands',     group: 'DATA COLLECTION' },
-  { id: 'mdms',       label: 'DATA BANKING',    icon: '≋', desc: 'Interval data repository',      group: 'DATA QUALITY' },
-  { id: 'vee',        label: 'VEE ENGINE',       icon: '◎', desc: 'Validation, estimation & edit', group: 'DATA QUALITY' },
-  { id: 'exceptions', label: 'EXCEPTION MGMT',  icon: '⚠', desc: 'Exception queue & resolution', group: 'OPERATIONS' },
-  { id: 'cis',        label: 'DEVICE REGISTRY', icon: '☰', desc: 'Customer & meter accounts',     group: 'OPERATIONS' },
-  { id: 'study',      label: 'STUDY MODE',       icon: '✦', desc: 'Exam prep & glossary',          group: 'TRAINING' },
+  { id: 'dashboard',  label: 'DASHBOARD',       icon: '▣', desc: 'Operations overview',             group: 'OVERVIEW' },
+  { id: 'rfmesh',     label: 'NETWORK HEALTH',  icon: '◈', desc: 'RF mesh topology & signal',       group: 'DATA COLLECTION' },
+  { id: 'headend',    label: 'DEVICE COMMS',    icon: '⊞', desc: 'Head-end & meter commands',       group: 'DATA COLLECTION' },
+  { id: 'mdms',       label: 'DATA BANKING',    icon: '≋', desc: 'Interval data & power quality',   group: 'DATA QUALITY' },
+  { id: 'vee',        label: 'VEE ENGINE',       icon: '◎', desc: 'Validation, estimation & edit',   group: 'DATA QUALITY' },
+  { id: 'exceptions', label: 'EXCEPTION MGMT',  icon: '⚠', desc: 'Exception queue & resolution',   group: 'OPERATIONS' },
+  { id: 'outage',     label: 'OUTAGE ANALYSIS', icon: '⚡', desc: 'Grid topology & outage correlation', group: 'OPERATIONS' },
+  { id: 'cis',        label: 'DEVICE REGISTRY', icon: '☰', desc: 'Customer & meter accounts',       group: 'OPERATIONS' },
+  { id: 'billing',    label: 'BILLING & SLA',   icon: '◷', desc: 'Cycle countdown & exception aging', group: 'ANALYTICS' },
+  { id: 'reports',    label: 'REPORTS',          icon: '≡', desc: 'Daily summary, accuracy, health', group: 'ANALYTICS' },
+  { id: 'handoff',    label: 'SHIFT HANDOFF',    icon: '✎', desc: 'Notes, handoff report, FSO status', group: 'ANALYTICS' },
+  { id: 'study',      label: 'STUDY MODE',       icon: '✦', desc: 'Exam prep, glossary & challenges', group: 'TRAINING' },
 ];
 
 export default function App() {
@@ -48,6 +56,14 @@ export default function App() {
         );
       case 'cis':
         return <CISSystem state={state} onCreateFieldOrder={createFieldOrder} />;
+      case 'outage':
+        return <OutageAnalysis state={state} />;
+      case 'billing':
+        return <BillingSLA state={state} derived={derived} />;
+      case 'reports':
+        return <ReportsModule state={state} />;
+      case 'handoff':
+        return <ShiftHandoff state={state} />;
       case 'study':
         return <StudyMode />;
       default:
@@ -104,7 +120,7 @@ export default function App() {
       <div className="app-body">
         {/* ---- Sidebar nav ---- */}
         <nav className="sidebar">
-          {['OVERVIEW', 'DATA COLLECTION', 'DATA QUALITY', 'OPERATIONS', 'TRAINING'].map((group, gi) => {
+          {['OVERVIEW', 'DATA COLLECTION', 'DATA QUALITY', 'OPERATIONS', 'ANALYTICS', 'TRAINING'].map((group, gi) => {
             const items = NAV_ITEMS.filter(n => n.group === group);
             return (
               <div key={group}>

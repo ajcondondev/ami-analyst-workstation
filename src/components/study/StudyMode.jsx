@@ -2,9 +2,72 @@
 // STUDY MODE — Glossary, exception explanations, quiz
 // ============================================================
 
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EXCEPTION_TYPES, RESOLUTION_OPTIONS } from '../../engine/simulation.js';
 import { METERS } from '../../data/meters.js';
+
+// ---- Simulation Challenges ----
+const CHALLENGES = [
+  {
+    id: 'CH001',
+    title: 'Critical Exception Clearance',
+    difficulty: 'Intermediate',
+    timeLimit: 180, // seconds
+    description: 'A transformer on Feeder SW-A has had a partial outage. Multiple meters are dark and billing cycle close is tomorrow. Triage and clear all critical exceptions before the deadline.',
+    scenario: 'Feeder SW-A, 6:00 AM. Three meters on TRF-SW-01 (MTR-SW-001, 002, 003) have gone dark overnight. Billing cycle closes in 26 hours. Your queue has 8 open exceptions.',
+    checklist: [
+      { id: 'c1', text: 'Check RF mesh — identify if collector COL-SW-01 is online' },
+      { id: 'c2', text: 'Request on-demand reads for all 3 dark meters' },
+      { id: 'c3', text: 'Identify the TRANSFORMER_OUTAGE exception in the queue' },
+      { id: 'c4', text: 'Issue a Field Service Order for transformer inspection' },
+      { id: 'c5', text: 'Estimate usage for all 3 meters using historical profile' },
+      { id: 'c6', text: 'Document root cause in audit trail for each exception' },
+      { id: 'c7', text: 'Escalate to supervisor — billing deadline approaching' },
+    ],
+    passCriteria: 'Complete all 7 steps before timer expires',
+    learningPoints: 'Transformer outages require both immediate comm retry AND field dispatch. Never wait for field service when billing deadline is imminent — estimate and document.',
+  },
+  {
+    id: 'CH002',
+    title: 'Billing Deadline Triage',
+    difficulty: 'Advanced',
+    timeLimit: 240,
+    description: 'It is 4:00 PM on billing cycle close day. You have 12 open exceptions, 6 with billing impact. Prioritize and resolve as many as possible before the 11:59 PM deadline.',
+    scenario: 'Cycle close day. 7 hours remain. Open exceptions include: 2 MISSING_READ (Residential), 1 CT_RATIO_MISMATCH (Commercial, $12,000/mo), 1 TAMPER_ALERT, 3 COMM_FAILURE (collector came back online 30 min ago), 1 CONSUMPTION_SPIKE, 3 ZERO_READ.',
+    checklist: [
+      { id: 'c1', text: 'Triage by billing impact — identify the 6 billing-impacting exceptions' },
+      { id: 'c2', text: 'Resolve CT_RATIO_MISMATCH first: issue FSO + escalate (largest revenue impact)' },
+      { id: 'c3', text: 'Retry comm on the 3 COMM_FAILURE meters (collector just came back online)' },
+      { id: 'c4', text: 'Estimate the 2 MISSING_READ meters using historical profile' },
+      { id: 'c5', text: 'Issue FSO for TAMPER_ALERT (cannot be closed without field visit)' },
+      { id: 'c6', text: 'Review CONSUMPTION_SPIKE interval chart — edit if data error, field order if real' },
+      { id: 'c7', text: 'Estimate the 3 ZERO_READ meters — confirm accounts are residential (not solar)' },
+      { id: 'c8', text: 'Document all resolutions with notes before 11:59 PM' },
+    ],
+    passCriteria: 'Complete all 8 steps and demonstrate correct priority order',
+    learningPoints: 'On cycle close day, work in priority order: billing impact → revenue risk → comm retries → estimations. CT ratio mismatches on large commercial accounts always go first.',
+  },
+  {
+    id: 'CH003',
+    title: 'Power Quality Incident Response',
+    difficulty: 'Advanced',
+    timeLimit: 200,
+    description: 'A voltage excursion event has been flagged on 4 meters in the Springfield-West area. Multiple sag events recorded. Identify the affected circuit and respond appropriately.',
+    scenario: 'Multiple VOLTAGE_EXCURSION exceptions have fired on MTR-SW-005, 006, 007 (all on TRF-SW-02, Feeder SW-A). Voltage sags of 97V, 103V, and 101V were recorded over the past 3 hours. No communication failures — all meters are reading normally.',
+    checklist: [
+      { id: 'c1', text: 'Navigate to Outage Analysis — view topology tree for Feeder SW-A' },
+      { id: 'c2', text: 'Confirm all 3 meters are on the same transformer (TRF-SW-02)' },
+      { id: 'c3', text: 'Check MDMS Power Quality tab for each meter — note sag voltages' },
+      { id: 'c4', text: 'Determine if this is a VOLTAGE_SAG pattern (multiple meters, same transformer)' },
+      { id: 'c5', text: 'Rule out meter fault — on-demand reads return valid data (not comm issue)' },
+      { id: 'c6', text: 'Issue a Field Service Order with issue type: "Voltage quality investigation"' },
+      { id: 'c7', text: 'Escalate to Distribution Engineering (voltage quality is out of analyst scope)' },
+      { id: 'c8', text: 'Document timeline: when sags occurred, voltage levels, affected meters' },
+    ],
+    passCriteria: 'Correctly identify transformer-level pattern and escalate appropriately',
+    learningPoints: 'Voltage excursions that affect multiple meters on the same transformer indicate a distribution-level power quality issue, not a meter problem. These require field investigation and engineering escalation, not data estimation.',
+  },
+];
 
 // ---- AMI Glossary ----
 const GLOSSARY = [
@@ -34,6 +97,16 @@ const GLOSSARY = [
   { term: 'Signal Strength',  def: 'Measured in dBm, indicates the quality of the RF signal between a meter and its collector. Below -100 dBm is considered marginal; above -85 dBm is strong.' },
   { term: 'Firmware',         def: 'Software embedded in the smart meter. Updated remotely (OTA — over the air) via the HES. Firmware version affects feature support, bug fixes, and event reporting.' },
   { term: 'CIS',              def: 'Customer Information System. The utility\'s billing and account management platform. Contains customer demographics, rate plans, billing history, and service history.' },
+  { term: 'Substation',       def: 'A high-voltage facility where transmission voltage (e.g., 115kV) is stepped down to distribution voltage (e.g., 13.8kV) for delivery to customers via feeders.' },
+  { term: 'Feeder',           def: 'A medium-voltage distribution circuit (typically 4kV–34.5kV) originating from a substation. Serves a geographic area and supplies multiple distribution transformers.' },
+  { term: 'Distribution Transformer', def: 'A pole-mounted or pad-mounted device that steps distribution voltage (13.8kV) down to service voltage (120/240V) for delivery to end customers. Typically serves 3–15 meters.' },
+  { term: 'Voltage Sag',      def: 'A brief reduction in RMS voltage below 90% of nominal (below 108V on a 120V circuit). Can be caused by motor starting, fault clearing, or load switching. Does not cause data loss but indicates power quality issues.' },
+  { term: 'Voltage Swell',    def: 'A brief increase in RMS voltage above 110% of nominal (above 132V on a 120V circuit). Can be caused by load disconnection or capacitor switching. Indicated by VOLTAGE_EXCURSION exceptions.' },
+  { term: 'Momentary Outage', def: 'A power interruption lasting less than 5 minutes. Meters will log a Last Gasp followed quickly by a Power Restore. Momentary outages don\'t require estimation if data was collected before and after.' },
+  { term: 'Sustained Outage', def: 'A power interruption lasting more than 5 minutes. Requires data estimation for the outage period if meter interval data is missing. May require field investigation to determine cause.' },
+  { term: 'SLA',              def: 'Service Level Agreement. In AMI operations, SLAs define the maximum acceptable time to resolve exceptions (e.g., 24h for errors, 72h for warnings). Unresolved exceptions at SLA breach require escalation.' },
+  { term: 'Billing Cycle',    def: 'The monthly period over which consumption is measured for billing. Typically closes on a fixed day (e.g., the 15th). All exceptions with billing impact must be resolved before cycle close to enable accurate bill generation.' },
+  { term: 'Outage Correlation', def: 'The process of identifying when multiple meters losing communication are caused by a single upstream device (transformer, collector, or feeder) rather than individual meter failures. Critical for efficient triage.' },
 ].sort((a, b) => a.term.localeCompare(b.term));
 
 // ---- Exception explanations ----
@@ -113,6 +186,28 @@ const EXCEPTION_EXPLANATIONS = {
       { action: 'Escalate',   when: 'High-usage commercial account, repeat tamper, or signs of bypass' },
     ],
     studyTip: 'Tamper alerts are never resolved by comm retry or estimation. A technician must physically inspect the meter and document findings. These are regulatory and safety events, not just data issues.',
+  },
+  TRANSFORMER_OUTAGE: {
+    what: 'Two or more meters served by the same distribution transformer are simultaneously not communicating, suggesting a transformer-level failure rather than individual meter issues.',
+    why: 'A transformer outage affects all downstream customers simultaneously, creating multiple comm failure and missing read exceptions that appear unrelated without grid topology context. Correct identification prevents unnecessary individual meter field orders.',
+    causes: ['Distribution transformer failure (overload, lightning strike, age)', 'Fuse blown on transformer primary', 'Physical damage to transformer (vehicle strike, flooding)', 'Voltage collapse on transformer secondary'],
+    resolutions: [
+      { action: 'Field Order',  when: 'Always — transformer outages require physical investigation and likely replacement' },
+      { action: 'Estimate',     when: 'While awaiting field response — estimate all affected meters using historical profiles' },
+      { action: 'Escalate',     when: 'Large number of customers affected, commercial accounts impacted, or feeder-level event suspected' },
+    ],
+    studyTip: 'The key skill is recognizing the pattern: multiple meters going dark simultaneously on the same transformer is a transformer event, not a coincidence. Always check the grid topology before issuing individual meter field orders.',
+  },
+  VOLTAGE_EXCURSION: {
+    what: 'A meter has recorded three or more voltage sag (< 110V) or voltage swell (> 130V) events within a monitoring period, indicating a power quality issue on the circuit.',
+    why: 'Voltage excursions can damage customer equipment, violate regulatory voltage requirements (ANSI C84.1), and indicate underlying distribution problems. Unlike data quality exceptions, these do not affect billing but require engineering investigation.',
+    causes: ['Heavy motor loads on the same circuit causing sag', 'Capacitor bank switching causing swell', 'Loose utility connections or corroded conductors', 'Undersized distribution transformer (chronic sag)', 'Fault clearing on adjacent feeders'],
+    resolutions: [
+      { action: 'Field Order',  when: 'Issue for voltage quality investigation — lineman must check utility connections' },
+      { action: 'Escalate',     when: 'Always escalate to Distribution Engineering for root cause analysis and corrective action' },
+      { action: 'Retry Comm',   when: 'Only if comm failure is also present — voltage excursions do not affect communication normally' },
+    ],
+    studyTip: 'Voltage excursion exceptions are a power quality issue, not a data quality issue. They should never be resolved with estimation or data edits. The correct response is always an FSO + Engineering escalation. Check if multiple meters on the same transformer are affected — that indicates a distribution-level problem.',
   },
   CT_RATIO_MISMATCH: {
     what: 'The CT (Current Transformer) ratio programmed in the meter does not match the ratio detected or expected based on service specifications.',
@@ -205,6 +300,45 @@ const QUIZ_SCENARIOS = [
     ],
     exceptionType: 'MISSING_READ',
     difficulty: 'Advanced',
+  },
+  {
+    id: 'Q007',
+    scenario: 'At 3:00 AM, four meters simultaneously go dark: MTR-SC-021, 022, 023, 024 (all on transformer TRF-SC-01). Collector COL-SC-01 is online. No other meters on COL-SC-01 are affected.',
+    question: 'What is the most likely root cause and correct first action?',
+    options: [
+      { code: 'A', text: 'Four individual meter failures — issue 4 separate Field Service Orders', correct: false, explain: 'Unlikely. Four meters failing simultaneously on the same transformer strongly suggests a transformer-level event, not 4 individual meter failures. Check topology before issuing individual FSOs.' },
+      { code: 'B', text: 'Collector backhaul issue — retry comm on all 4 meters', correct: false, explain: 'Partially correct instinct but not the best diagnosis. The collector is online and only the 4 meters on TRF-SC-01 are affected. Other meters on COL-SC-01 are communicating — this rules out a backhaul issue.' },
+      { code: 'C', text: 'Likely transformer outage — issue one FSO for transformer TRF-SC-01 and estimate all 4 meters', correct: true, explain: 'Correct! Multiple meters on the same transformer going dark simultaneously is the classic pattern for a transformer outage. One FSO for the transformer is more efficient than 4 individual meter FSOs. Estimate meter data while awaiting field response.' },
+      { code: 'D', text: 'Power outage affecting all of Feeder SC-A — escalate to operations center', correct: false, explain: 'Too broad — other meters on Feeder SC-A (COL-SC-01 and COL-SC-02) are still communicating. The impact is limited to TRF-SC-01, which points to the transformer level, not the feeder.' },
+    ],
+    exceptionType: 'TRANSFORMER_OUTAGE',
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'Q008',
+    scenario: 'It is 48 hours before billing cycle close. You have 15 open exceptions. MTR-SW-010 has a MISSING_READ that is 67 hours old. The SLA target is 72 hours. Signal strength is currently 38%.',
+    question: 'Given the SLA status and billing deadline, what is the correct action?',
+    options: [
+      { code: 'A', text: 'Wait — the SLA limit is 72 hours and you still have 5 hours', correct: false, explain: 'Incorrect. With 5 hours until SLA breach AND billing close in 48 hours, waiting is not appropriate. The billing deadline takes priority — you need data resolved before cycle close, not just before SLA breach.' },
+      { code: 'B', text: 'Attempt on-demand read (signal is weak), then estimate immediately if it fails — both deadlines require action now', correct: true, explain: 'Correct! Two deadlines are converging: SLA breach in 5 hours AND billing cycle in 48 hours. Try comm once (signal may recover), but be prepared to estimate immediately. Document the SLA risk in the audit trail.' },
+      { code: 'C', text: 'Issue a Field Service Order — signal is poor so field verification is needed', correct: false, explain: 'With 48 hours to billing close, a field tech cannot arrive in time. FSO is not the right tool when both the SLA and billing deadline are imminent. Estimate and document, then create an FSO for the next cycle.' },
+      { code: 'D', text: 'Escalate to supervisor and wait for guidance', correct: false, explain: 'Escalation without taking action loses valuable time. With two imminent deadlines, take action (comm retry + estimate) AND notify the supervisor simultaneously.' },
+    ],
+    exceptionType: 'MISSING_READ',
+    difficulty: 'Advanced',
+  },
+  {
+    id: 'Q009',
+    scenario: 'MTR-SW-005, 006, and 007 have each recorded 5 voltage sag events (94–108V) over the past 12 hours. All three meters are on transformer TRF-SW-02. They are communicating normally and interval data is clean.',
+    question: 'How should these VOLTAGE_EXCURSION exceptions be resolved?',
+    options: [
+      { code: 'A', text: 'Estimate the interval data for all 3 meters and close the exceptions', correct: false, explain: 'Wrong approach. Voltage excursion exceptions indicate a power quality issue, not a data quality problem. The interval data is clean — there is nothing to estimate.' },
+      { code: 'B', text: 'Retry comm on all 3 meters — the sags may have caused data gaps', correct: false, explain: 'No data gaps are present — all meters are communicating and interval data is clean. Voltage sags do not cause comm failures on modern smart meters. Retry comm is not relevant here.' },
+      { code: 'C', text: 'Issue a Field Service Order and escalate to Distribution Engineering — this is a power quality event affecting a transformer circuit', correct: true, explain: 'Correct! Three meters on the same transformer showing identical voltage sag patterns indicates a distribution-level power quality issue. This requires an FSO for field investigation AND an engineering escalation. The analyst resolves the exception by triaging it correctly, not by editing data.' },
+      { code: 'D', text: 'Close the exceptions as informational — voltage sags do not affect billing', correct: false, explain: 'Incorrect process. Even though billing is not directly impacted, voltage excursions require a documented response (FSO + escalation). Closing without action violates the utility\'s power quality response procedures.' },
+    ],
+    exceptionType: 'VOLTAGE_EXCURSION',
+    difficulty: 'Intermediate',
   },
 ];
 
@@ -451,6 +585,177 @@ function QuizTab() {
   );
 }
 
+// ---- Challenges Tab ----
+function ChallengesTab() {
+  const [activeChallengeId, setActiveChallengeId] = useState(null);
+  const [timeLeft, setTimeLeft]   = useState(0);
+  const [running, setRunning]     = useState(false);
+  const [completed, setCompleted] = useState({});   // { checkId: true }
+  const [result, setResult]       = useState(null); // 'pass' | 'timeout'
+  const timerRef = useRef(null);
+
+  const challenge = CHALLENGES.find(c => c.id === activeChallengeId);
+
+  function startChallenge(ch) {
+    clearInterval(timerRef.current);
+    setActiveChallengeId(ch.id);
+    setTimeLeft(ch.timeLimit);
+    setCompleted({});
+    setResult(null);
+    setRunning(true);
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          setRunning(false);
+          setResult('timeout');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  function toggleCheck(id) {
+    if (!running) return;
+    setCompleted(c => {
+      const updated = { ...c, [id]: !c[id] };
+      // Check if all items done
+      if (challenge && Object.values(updated).filter(Boolean).length === challenge.checklist.length) {
+        clearInterval(timerRef.current);
+        setRunning(false);
+        setResult('pass');
+      }
+      return updated;
+    });
+  }
+
+  function exitChallenge() {
+    clearInterval(timerRef.current);
+    setActiveChallengeId(null);
+    setRunning(false);
+    setResult(null);
+    setCompleted({});
+  }
+
+  const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const timerUrgency = timeLeft <= 30 ? 'urgent' : timeLeft <= 60 ? 'warn' : '';
+  const doneCount = challenge ? Object.values(completed).filter(Boolean).length : 0;
+
+  if (!activeChallengeId) {
+    return (
+      <div className="challenges-layout">
+        <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#757575', marginBottom: 6, lineHeight: 1.6 }}>
+          Simulation Challenges are timed walkthroughs of realistic AMI analyst scenarios. Work through the checklist before the timer expires.
+        </div>
+        {CHALLENGES.map(ch => (
+          <div key={ch.id} className="challenge-card">
+            <div className="challenge-header">
+              <span className="challenge-title">{ch.title}</span>
+              <span className={`badge ${ch.difficulty === 'Advanced' ? 'badge-red' : 'badge-amber'}`}>
+                {ch.difficulty}
+              </span>
+              <span className="mono text-dim" style={{ fontSize: 9 }}>{ch.timeLimit}s limit</span>
+            </div>
+            <div className="challenge-desc">{ch.description}</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#757575', marginBottom: 8 }}>
+              {ch.checklist.length} steps &nbsp;·&nbsp; Scenario: {ch.scenario.slice(0, 100)}…
+            </div>
+            <button className="btn-primary" style={{ fontSize: 10 }} onClick={() => startChallenge(ch)}>
+              ▶ START CHALLENGE
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="challenges-layout">
+      <div className={`challenge-card ${running ? 'challenge-active' : ''}`}>
+        <div className="challenge-header">
+          <span className="challenge-title">{challenge.title}</span>
+          <span className={`badge ${challenge.difficulty === 'Advanced' ? 'badge-red' : 'badge-amber'}`}>
+            {challenge.difficulty}
+          </span>
+          {running && (
+            <span className={`challenge-timer timer-${timerUrgency}`}>{formatTime(timeLeft)}</span>
+          )}
+        </div>
+
+        {result && (
+          <div className={`challenge-result-banner challenge-result-${result === 'pass' ? 'pass' : 'timeout'}`}>
+            {result === 'pass'
+              ? `✓ CHALLENGE COMPLETE — ${doneCount}/${challenge.checklist.length} STEPS IN ${formatTime(challenge.timeLimit - timeLeft)}`
+              : `⏱ TIME EXPIRED — ${doneCount}/${challenge.checklist.length} STEPS COMPLETED`
+            }
+          </div>
+        )}
+
+        <div className="challenge-desc">{challenge.scenario}</div>
+
+        {/* Progress bar */}
+        {running && (
+          <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, marginBottom: 8 }}>
+            <div style={{
+              height: '100%', borderRadius: 2,
+              width: `${(doneCount / challenge.checklist.length) * 100}%`,
+              background: '#22c55e', transition: 'width 0.3s',
+            }} />
+          </div>
+        )}
+
+        <div className="challenge-checklist">
+          {challenge.checklist.map(item => (
+            <div
+              key={item.id}
+              className={`challenge-check-item ${completed[item.id] ? 'item-done' : ''}`}
+              onClick={() => toggleCheck(item.id)}
+            >
+              <div className={`challenge-check-box ${completed[item.id] ? 'checked' : ''}`}>
+                {completed[item.id] ? '✓' : ''}
+              </div>
+              <span style={{ textDecoration: completed[item.id] ? 'line-through' : 'none' }}>
+                {item.text}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {result && (
+          <div style={{
+            background: '#f8fafc', border: '1px solid #e5e7eb',
+            padding: '10px 12px', fontFamily: 'monospace', fontSize: 10,
+            color: '#757575', lineHeight: 1.7, marginTop: 8,
+          }}>
+            <div style={{ fontWeight: 700, color: '#1A237E', marginBottom: 4 }}>LEARNING POINTS:</div>
+            {challenge.learningPoints}
+          </div>
+        )}
+
+        <div className="challenge-btn-row" style={{ marginTop: 10 }}>
+          {running && (
+            <button className="btn-ghost" style={{ fontSize: 9 }} onClick={exitChallenge}>
+              × ABANDON CHALLENGE
+            </button>
+          )}
+          {!running && result && (
+            <>
+              <button className="btn-primary" style={{ fontSize: 10 }} onClick={() => startChallenge(challenge)}>
+                ↻ RETRY CHALLENGE
+              </button>
+              <button className="btn-ghost" style={{ fontSize: 10 }} onClick={exitChallenge}>
+                ← CHALLENGE LIST
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Main Study Mode ----
 export default function StudyMode() {
   const [activeTab, setActiveTab] = useState('guide');
@@ -465,11 +770,12 @@ export default function StudyMode() {
         </div>
       </div>
 
-      <div className="study-tabs">
+      <div className="study-tabs" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {[
-          { id: 'guide',    label: '◎ EXCEPTION GUIDE', desc: 'What each exception means + resolution logic' },
-          { id: 'glossary', label: '≋ GLOSSARY',         desc: `${GLOSSARY.length} AMI terms defined` },
-          { id: 'quiz',     label: '⚡ QUIZ MODE',        desc: `${QUIZ_SCENARIOS.length} scenarios, scored` },
+          { id: 'guide',      label: '◎ EXCEPTION GUIDE', desc: `${Object.keys(EXCEPTION_TYPES).length} exception types` },
+          { id: 'glossary',   label: '≋ GLOSSARY',         desc: `${GLOSSARY.length} AMI terms defined` },
+          { id: 'quiz',       label: '⚡ QUIZ MODE',        desc: `${QUIZ_SCENARIOS.length} scenarios, scored` },
+          { id: 'challenges', label: '⊞ CHALLENGES',        desc: `${CHALLENGES.length} timed simulations` },
         ].map(t => (
           <button
             key={t.id}
@@ -493,9 +799,10 @@ export default function StudyMode() {
       )}
 
       <div className="study-body">
-        {activeTab === 'guide'    && <ExceptionGuideTab />}
-        {activeTab === 'glossary' && <GlossaryTab search={search} />}
-        {activeTab === 'quiz'     && <QuizTab />}
+        {activeTab === 'guide'      && <ExceptionGuideTab />}
+        {activeTab === 'glossary'   && <GlossaryTab search={search} />}
+        {activeTab === 'quiz'       && <QuizTab />}
+        {activeTab === 'challenges' && <ChallengesTab />}
       </div>
     </div>
   );

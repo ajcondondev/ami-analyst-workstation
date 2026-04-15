@@ -4,17 +4,20 @@
 // ============================================================
 
 import { METERS, COLLECTORS } from '../data/meters.js';
+import { TRANSFORMERS, METER_TRANSFORMER_MAP, getMetersByTransformer } from '../data/grid.js';
 
 // ---- Exception types ----
 export const EXCEPTION_TYPES = {
-  MISSING_READ:        { code: 'MISSING_READ',        label: 'Missing Read',           severity: 'Error',   billingImpact: true },
-  CONSUMPTION_SPIKE:   { code: 'CONSUMPTION_SPIKE',   label: 'Consumption Spike',      severity: 'Error',   billingImpact: true },
-  ZERO_READ:           { code: 'ZERO_READ',           label: 'Zero Read Active Acct',  severity: 'Warning', billingImpact: true },
-  NEGATIVE_CONSUMPTION:{ code: 'NEGATIVE_CONSUMPTION',label: 'Negative Consumption',   severity: 'Error',   billingImpact: true },
-  STALE_DATA:          { code: 'STALE_DATA',          label: 'Stale Data',             severity: 'Warning', billingImpact: false },
-  COMM_FAILURE:        { code: 'COMM_FAILURE',        label: 'Communication Failure',  severity: 'Error',   billingImpact: false },
-  TAMPER_ALERT:        { code: 'TAMPER_ALERT',        label: 'Tamper Alert',           severity: 'Error',   billingImpact: true },
-  CT_RATIO_MISMATCH:   { code: 'CT_RATIO_MISMATCH',  label: 'CT Ratio Mismatch',      severity: 'Error',   billingImpact: true },
+  MISSING_READ:        { code: 'MISSING_READ',        label: 'Missing Read',              severity: 'Error',   billingImpact: true },
+  CONSUMPTION_SPIKE:   { code: 'CONSUMPTION_SPIKE',   label: 'Consumption Spike',         severity: 'Error',   billingImpact: true },
+  ZERO_READ:           { code: 'ZERO_READ',           label: 'Zero Read Active Acct',     severity: 'Warning', billingImpact: true },
+  NEGATIVE_CONSUMPTION:{ code: 'NEGATIVE_CONSUMPTION',label: 'Negative Consumption',      severity: 'Error',   billingImpact: true },
+  STALE_DATA:          { code: 'STALE_DATA',          label: 'Stale Data',                severity: 'Warning', billingImpact: false },
+  COMM_FAILURE:        { code: 'COMM_FAILURE',        label: 'Communication Failure',     severity: 'Error',   billingImpact: false },
+  TAMPER_ALERT:        { code: 'TAMPER_ALERT',        label: 'Tamper Alert',              severity: 'Error',   billingImpact: true },
+  CT_RATIO_MISMATCH:   { code: 'CT_RATIO_MISMATCH',  label: 'CT Ratio Mismatch',         severity: 'Error',   billingImpact: true },
+  TRANSFORMER_OUTAGE:  { code: 'TRANSFORMER_OUTAGE',  label: 'Transformer Outage',        severity: 'Error',   billingImpact: false },
+  VOLTAGE_EXCURSION:   { code: 'VOLTAGE_EXCURSION',   label: 'Voltage Excursion',         severity: 'Warning', billingImpact: false },
 };
 
 // ---- Resolution options ----
@@ -47,6 +50,7 @@ function pickRandom(arr) {
 
 // ---- Build initial meter state ----
 function buildInitialMeterState(meter) {
+  const nominalV = 120 + (Math.random() - 0.5) * 3;
   return {
     meterID: meter.meterID,
     signalStrength: randInt(60, 100), // dBm analog 0-100
@@ -54,10 +58,15 @@ function buildInitialMeterState(meter) {
     lastHeard: Date.now() - randInt(0, 3600000),
     commStatus: 'Communicating',
     veeStatus: 'Passed',
-    staleCount: 0,         // how many cycles same value reported
-    lastRegisterRead: meter.avgKWh * randInt(800, 1200), // cumulative kWh
-    intervalData: generateIntervalData(meter, 0), // today's 96 intervals
+    staleCount: 0,
+    lastRegisterRead: meter.avgKWh * randInt(800, 1200),
+    intervalData: generateIntervalData(meter, 0),
     recentEvents: [],
+    // Power quality
+    voltageNominal: parseFloat(nominalV.toFixed(1)),
+    currentVoltage: parseFloat(nominalV.toFixed(1)),
+    powerQualityEvents: [],
+    voltageExcursionCount: 0,
     anomalyFlags: {
       hasMissingRead: false,
       hasSpike: false,
@@ -235,7 +244,45 @@ function runMeterTick(meter) {
 
   // Update register read
   const dailyKWh = meter.avgKWh * (0.9 + Math.random() * 0.2);
-  ms.lastRegisterRead += dailyKWh / 24; // per hour increment
+  ms.lastRegisterRead += dailyKWh / 24;
+
+  // ---- Power quality simulation ----
+  const nomV = ms.voltageNominal || 120;
+  const vDrift = (Math.random() - 0.5) * 2.5;
+  ms.currentVoltage = parseFloat(Math.max(108, Math.min(132, nomV + vDrift)).toFixed(1));
+
+  if (!ms.powerQualityEvents) ms.powerQualityEvents = [];
+
+  // Voltage sag (< 110V) — 1.5% chance per tick
+  if (Math.random() < 0.015) {
+    const sagV = parseFloat((95 + Math.random() * 14).toFixed(1));
+    ms.currentVoltage = sagV;
+    ms.powerQualityEvents.unshift({ ts: simState.simTime, type: 'VOLTAGE_SAG', voltage: sagV, label: `Voltage Sag: ${sagV}V` });
+    ms.voltageExcursionCount = (ms.voltageExcursionCount || 0) + 1;
+  }
+
+  // Voltage swell (> 130V) — 0.8% chance per tick
+  if (Math.random() < 0.008) {
+    const swellV = parseFloat((131 + Math.random() * 9).toFixed(1));
+    ms.currentVoltage = swellV;
+    ms.powerQualityEvents.unshift({ ts: simState.simTime, type: 'VOLTAGE_SWELL', voltage: swellV, label: `Voltage Swell: ${swellV}V` });
+    ms.voltageExcursionCount = (ms.voltageExcursionCount || 0) + 1;
+  }
+
+  // Momentary outage (< 5 sim-min) — 0.3% chance per tick
+  if (Math.random() < 0.003) {
+    const dur = Math.ceil(Math.random() * 4);
+    ms.powerQualityEvents.unshift({ ts: simState.simTime, type: 'MOMENTARY_OUTAGE', durationMin: dur, label: `Momentary Outage: ${dur} min` });
+  }
+
+  // Sustained outage (> 5 sim-min) — 0.1% chance per tick
+  if (Math.random() < 0.001) {
+    const dur = Math.ceil(6 + Math.random() * 54);
+    ms.powerQualityEvents.unshift({ ts: simState.simTime, type: 'SUSTAINED_OUTAGE', durationMin: dur, label: `Sustained Outage: ${dur} min` });
+  }
+
+  // Keep only last 30 PQ events
+  if (ms.powerQualityEvents.length > 30) ms.powerQualityEvents.length = 30;
 }
 
 function generateExceptions() {
@@ -334,6 +381,46 @@ function generateExceptions() {
       });
     }
   }
+
+  // Transformer outage — 2+ meters on same transformer not communicating
+  TRANSFORMERS.forEach(trf => {
+    const trfMeterIDs = getMetersByTransformer(trf.id);
+    const darkIDs = trfMeterIDs.filter(mID => {
+      const ms = simState.meterStates[mID];
+      return ms && ms.commStatus === 'Not Communicating';
+    });
+    const alreadyOpen = simState.exceptions.some(
+      e => e.type === 'TRANSFORMER_OUTAGE' && e.extra?.transformerID === trf.id && e.status === 'Open'
+    );
+    if (darkIDs.length >= 2 && !alreadyOpen) {
+      addException('TRANSFORMER_OUTAGE', darkIDs[0], {
+        detail: `${darkIDs.length}/${trfMeterIDs.length} meters on transformer ${trf.id} (${trf.address}) not communicating. Potential transformer-level outage.`,
+        transformerID: trf.id,
+        transformerName: trf.name,
+        feederID: trf.feederID,
+        affectedMeters: darkIDs,
+        totalMeters: trfMeterIDs.length,
+      });
+    }
+  });
+
+  // Voltage excursion — meters with 3+ voltage events
+  METERS.forEach(meter => {
+    const ms = simState.meterStates[meter.meterID];
+    if (!ms) return;
+    if ((ms.voltageExcursionCount || 0) >= 3 && !hasOpenException(meter.meterID, 'VOLTAGE_EXCURSION')) {
+      const pqEvents = (ms.powerQualityEvents || []).filter(e => e.type === 'VOLTAGE_SAG' || e.type === 'VOLTAGE_SWELL');
+      const sagCount   = pqEvents.filter(e => e.type === 'VOLTAGE_SAG').length;
+      const swellCount = pqEvents.filter(e => e.type === 'VOLTAGE_SWELL').length;
+      addException('VOLTAGE_EXCURSION', meter.meterID, {
+        detail: `${ms.voltageExcursionCount} voltage excursion events (${sagCount} sags, ${swellCount} swells). Circuit power quality may be degraded.`,
+        sagCount,
+        swellCount,
+        excursionCount: ms.voltageExcursionCount,
+      });
+      ms.voltageExcursionCount = 0;
+    }
+  });
 }
 
 function hasOpenException(meterID, type) {

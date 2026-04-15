@@ -59,10 +59,108 @@ function IntervalTooltip({ active, payload, label }) {
   );
 }
 
+const PQ_TYPE_LABELS = {
+  VOLTAGE_SAG:      'Voltage Sag',
+  VOLTAGE_SWELL:    'Voltage Swell',
+  MOMENTARY_OUTAGE: 'Momentary Outage',
+  SUSTAINED_OUTAGE: 'Sustained Outage',
+};
+
+function PowerQualityTab({ meter, meterState }) {
+  if (!meter) return <div className="loading">Select a meter to view power quality data</div>;
+
+  const pqEvents = meterState?.powerQualityEvents || [];
+  const simNow   = Date.now();
+
+  const sagCount      = pqEvents.filter(e => e.type === 'VOLTAGE_SAG').length;
+  const swellCount    = pqEvents.filter(e => e.type === 'VOLTAGE_SWELL').length;
+  const momentaryCount = pqEvents.filter(e => e.type === 'MOMENTARY_OUTAGE').length;
+  const sustainedCount = pqEvents.filter(e => e.type === 'SUSTAINED_OUTAGE').length;
+
+  const currentV = meterState?.currentVoltage ?? 120;
+  const nominalV = meterState?.voltageNominal ?? 120;
+  // Map voltage 90–140V → 0–100% for bar
+  const vPct = Math.max(0, Math.min(100, ((currentV - 90) / 50) * 100));
+  const vColor = currentV < 110 ? '#3b82f6' : currentV > 130 ? '#f59e0b' : '#22c55e';
+
+  function formatEvtTs(ts) {
+    return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  return (
+    <div className="pq-layout">
+      {/* Summary */}
+      <div className="pq-summary-row">
+        <div className="pq-stat-chip">
+          <div className="pq-stat-val" style={{ color: sagCount > 0 ? '#3b82f6' : '#9ca3af' }}>{sagCount}</div>
+          <div className="pq-stat-lbl">Voltage Sags</div>
+        </div>
+        <div className="pq-stat-chip">
+          <div className="pq-stat-val" style={{ color: swellCount > 0 ? '#f59e0b' : '#9ca3af' }}>{swellCount}</div>
+          <div className="pq-stat-lbl">Voltage Swells</div>
+        </div>
+        <div className="pq-stat-chip">
+          <div className="pq-stat-val" style={{ color: momentaryCount > 0 ? '#ef4444' : '#9ca3af' }}>{momentaryCount}</div>
+          <div className="pq-stat-lbl">Momentary Outages</div>
+        </div>
+        <div className="pq-stat-chip">
+          <div className="pq-stat-val" style={{ color: sustainedCount > 0 ? '#b91c1c' : '#9ca3af' }}>{sustainedCount}</div>
+          <div className="pq-stat-lbl">Sustained Outages</div>
+        </div>
+        <div className="pq-stat-chip">
+          <div className="pq-stat-val" style={{ color: vColor }}>{currentV.toFixed(1)}V</div>
+          <div className="pq-stat-lbl">Current Voltage</div>
+        </div>
+      </div>
+
+      {/* Voltage gauge */}
+      <div className="pq-voltage-gauge">
+        <div className="pq-voltage-label">
+          VOLTAGE LEVEL — Nominal: {nominalV.toFixed(1)}V &nbsp;|&nbsp; Sag threshold: &lt;110V &nbsp;|&nbsp; Swell threshold: &gt;130V
+        </div>
+        <div className="pq-voltage-bar-track">
+          <div className="pq-voltage-bar-fill"
+            style={{ width: `${vPct}%`, background: vColor }} />
+        </div>
+        <div className="pq-voltage-val" style={{ color: vColor }}>
+          {currentV.toFixed(1)} V
+          {currentV < 110 && <span style={{ marginLeft: 8, fontSize: 10 }}>⚡ SAG</span>}
+          {currentV > 130 && <span style={{ marginLeft: 8, fontSize: 10 }}>⚡ SWELL</span>}
+          {currentV >= 110 && currentV <= 130 && <span style={{ marginLeft: 8, fontSize: 10, color: '#9ca3af' }}>NORMAL</span>}
+        </div>
+      </div>
+
+      {/* Events log */}
+      <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#757575', letterSpacing: '0.06em', marginBottom: 4 }}>
+        POWER QUALITY EVENTS — LAST {pqEvents.length} RECORDED
+      </div>
+      {pqEvents.length === 0 ? (
+        <div className="pq-no-events">No power quality events recorded for this meter</div>
+      ) : (
+        <div className="pq-events-list">
+          {pqEvents.map((evt, i) => (
+            <div key={i} className="pq-event-row">
+              <span className={`pq-event-type pq-type-${evt.type}`}>
+                {PQ_TYPE_LABELS[evt.type] || evt.type}
+              </span>
+              <span className="pq-event-ts">{formatEvtTs(evt.ts)}</span>
+              <span className="pq-event-detail">
+                {evt.voltage != null ? `${evt.voltage.toFixed(1)} V` : ''}
+                {evt.durationMin != null ? `${evt.durationMin} min` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MDMSView({ state }) {
   const [selectedMeterID, setSelectedMeterID] = useState(METERS[0]?.meterID || '');
   const [search, setSearch] = useState('');
   const [veeFilter, setVeeFilter] = useState('ALL');
+  const [rightTab, setRightTab] = useState('intervals'); // 'intervals' | 'registers' | 'pq'
 
   const meterStates = state?.meterStates || {};
 
@@ -223,7 +321,31 @@ export default function MDMSView({ state }) {
           <div className="loading">Select a meter to view data</div>
         ) : (
           <>
-            {/* Meter header */}
+            {/* Right panel sub-tabs */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+              {[
+                { id: 'intervals', label: '≋ INTERVAL DATA' },
+                { id: 'registers', label: '⊞ REGISTER LOG' },
+                { id: 'pq',        label: '⚡ POWER QUALITY' },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  className={`rfmesh-filter-btn ${rightTab === t.id ? 'rfmesh-filter-active' : ''}`}
+                  onClick={() => setRightTab(t.id)}
+                  style={{ fontSize: 9, padding: '4px 12px' }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Power Quality tab */}
+            {rightTab === 'pq' && (
+              <PowerQualityTab meter={selectedMeter} meterState={selectedMeterState} />
+            )}
+
+            {/* Meter header (always visible when not on PQ tab) */}
+            {rightTab !== 'pq' && (
             <div className="mdms-meter-header">
               <div>
                 <div className="mdms-meter-header-id">{selectedMeter.meterID}</div>
@@ -235,8 +357,11 @@ export default function MDMSView({ state }) {
                 <StatusBadge status={selectedMeterState.commStatus || 'Communicating'} size="lg" />
               </div>
             </div>
+            )}
 
-            {/* Interval stats strip */}
+            {/* Interval stats strip + chart (intervals tab) */}
+            {rightTab === 'intervals' && (
+            <>
             <div className="mdms-stats-strip">
               <div className="mdms-stat-item">
                 <span className="mdms-stat-key">TOTAL (24H)</span>
@@ -325,8 +450,11 @@ export default function MDMSView({ state }) {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            </>
+            )}
 
-            {/* Register read log */}
+            {/* Register read log (registers tab) */}
+            {rightTab === 'registers' && (
             <div className="mdms-register-panel">
               <div className="chart-title">REGISTER READ LOG — LAST 8 READS</div>
               <table className="data-table">
@@ -361,6 +489,7 @@ export default function MDMSView({ state }) {
                 </tbody>
               </table>
             </div>
+            )}
           </>
         )}
       </div>

@@ -1,0 +1,1048 @@
+/* ============================================================
+   PHASE 7 — NEW MODULES
+   Outage Analysis, Billing SLA, Reports, Shift Handoff,
+   Power Quality, Enhanced Study Mode
+   ============================================================ */
+
+/* ---- New exception type badges ---- */
+.exc-type-TRANSFORMER_OUTAGE { background: #BF360C; color: #FFFFFF; border: none; animation: pulse-badge 1.2s infinite; }
+.exc-type-VOLTAGE_EXCURSION  { background: #F57F17; color: #FFFFFF; border: none; }
+
+/* ============================================================
+   OUTAGE ANALYSIS
+   ============================================================ */
+
+.outage-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.outage-header-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.outage-summary-card {
+  flex: 1;
+  min-width: 120px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.outage-summary-card.card-red    { border-color: #ef4444; background: rgba(239,68,68,0.05); }
+.outage-summary-card.card-amber  { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
+.outage-summary-card.card-green  { border-color: #22c55e; background: rgba(34,197,94,0.05); }
+
+.outage-summary-num {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.outage-summary-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.outage-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.outage-tab-btn {
+  padding: 7px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  transition: all 0.1s;
+}
+
+.outage-tab-btn:hover { border-color: var(--teal); color: var(--teal); }
+.outage-tab-active { border-color: var(--teal) !important; background: rgba(0,131,143,0.07) !important; color: var(--teal) !important; }
+
+/* Tree view */
+.outage-tree {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tree-sub-node { margin-bottom: 12px; }
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+.tree-row:hover { background: var(--bg-hover); }
+.tree-row-selected { background: rgba(0,131,143,0.08) !important; border-left: 2px solid var(--teal); }
+
+.tree-indent-1 { padding-left: 18px; }
+.tree-indent-2 { padding-left: 36px; }
+.tree-indent-3 { padding-left: 54px; }
+
+.tree-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tree-dot-ok      { background: #22c55e; }
+.tree-dot-degraded { background: #f59e0b; }
+.tree-dot-outage  { background: #ef4444; box-shadow: 0 0 4px rgba(239,68,68,0.6); }
+.tree-dot-unknown { background: #9ca3af; }
+
+.tree-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  flex: 1;
+}
+
+.tree-sublabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.tree-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+.tree-badge-ok     { background: rgba(34,197,94,0.12);  color: #22c55e; }
+.tree-badge-warn   { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.tree-badge-alert  { background: rgba(239,68,68,0.12);  color: #ef4444; }
+
+.tree-chevron { font-size: 9px; color: var(--text-dim); width: 10px; text-align: center; }
+
+/* Detail panel (right side of split) */
+.outage-body { display: flex; gap: 10px; flex: 1; min-height: 0; }
+.outage-tree-col { width: 340px; flex-shrink: 0; display: flex; flex-direction: column; }
+.outage-detail-col { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+
+.outage-detail-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.outage-detail-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-head);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.outage-meter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+.outage-meter-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.outage-meter-chip.chip-dark { border-color: #ef4444; background: rgba(239,68,68,0.05); }
+.outage-meter-chip.chip-ok   { border-color: #22c55e; background: rgba(34,197,94,0.04); }
+
+/* Outage map */
+.outage-map {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.outage-feeder-block {
+  border: 1px solid var(--border);
+  padding: 10px;
+}
+
+.outage-feeder-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-head);
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.outage-trf-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outage-trf-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.1s;
+}
+.outage-trf-chip:hover { border-color: var(--teal); }
+.trf-chip-ok      { border-color: rgba(34,197,94,0.3);  background: rgba(34,197,94,0.04); }
+.trf-chip-degraded { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.05); }
+.trf-chip-outage  { border-color: rgba(239,68,68,0.5);  background: rgba(239,68,68,0.06); }
+
+.trf-chip-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  flex: 1;
+}
+.trf-chip-stat {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+}
+.trf-chip-stat-red   { color: #ef4444; }
+.trf-chip-stat-amber { color: #f59e0b; }
+.trf-chip-stat-green { color: #22c55e; }
+
+/* ============================================================
+   BILLING SLA DASHBOARD
+   ============================================================ */
+
+.billing-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.billing-top-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.billing-cycle-card {
+  background: linear-gradient(135deg, rgba(26,35,126,0.06) 0%, rgba(0,131,143,0.04) 100%);
+  border: 1px solid rgba(26,35,126,0.2);
+  padding: 14px 18px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.billing-cycle-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.billing-cycle-countdown {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1;
+}
+
+.billing-cycle-countdown.urgency-high { color: #ef4444; }
+.billing-cycle-countdown.urgency-med  { color: #f59e0b; }
+
+.billing-cycle-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.billing-day-setting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-dim);
+}
+
+.billing-day-input {
+  width: 48px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  color: var(--text);
+}
+
+.billing-kpi-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.billing-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.billing-kpi-item { text-align: center; }
+
+.billing-kpi-val {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.billing-kpi-lbl {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.sla-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  flex: 1.5;
+  min-width: 220px;
+}
+
+.sla-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sla-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sla-bar-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.sla-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sla-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s;
+}
+
+.sla-bar-pct {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  width: 36px;
+  text-align: right;
+}
+
+/* Exception aging table */
+.billing-aging-section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+.billing-aging-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  z-index: 1;
+}
+
+.billing-aging-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-head);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aging-legend {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.aging-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.aging-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+}
+
+.aging-row-green  { background: transparent; }
+.aging-row-yellow { background: rgba(245,158,11,0.07); }
+.aging-row-orange { background: rgba(239,68,68,0.06); }
+.aging-row-red    { background: rgba(185,28,28,0.09); }
+
+.aging-age-cell {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.aging-age-green  { color: #22c55e; }
+.aging-age-yellow { color: #f59e0b; }
+.aging-age-orange { color: #ef4444; }
+.aging-age-red    { color: #b91c1c; }
+
+.aging-sla-bar {
+  display: inline-block;
+  height: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+/* ============================================================
+   REPORTS MODULE
+   ============================================================ */
+
+.reports-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.reports-tab-btn {
+  padding: 8px 18px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  transition: all 0.1s;
+}
+.reports-tab-btn:hover { border-color: var(--teal); color: var(--teal); }
+.reports-tab-active { border-color: var(--teal) !important; background: rgba(0,131,143,0.07) !important; color: var(--teal) !important; }
+
+.reports-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-section {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.report-section-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-head);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.export-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--teal);
+  color: var(--teal);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.1s;
+  text-transform: uppercase;
+}
+.export-btn:hover { background: var(--teal); color: #fff; }
+
+.report-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.report-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.report-stat-chip-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.report-stat-chip-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.report-accuracy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.accuracy-card {
+  text-align: center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.accuracy-pct {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.accuracy-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.health-table { width: 100%; border-collapse: collapse; }
+.health-table th {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.health-table td {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.health-score-bar {
+  display: inline-block;
+  height: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* ============================================================
+   SHIFT HANDOFF / NOTES
+   ============================================================ */
+
+.handoff-layout {
+  display: flex;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+.handoff-left {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.handoff-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.handoff-notes-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+}
+
+.handoff-notes-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-head);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.handoff-textarea {
+  flex: 1;
+  min-height: 200px;
+  padding: 10px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  resize: none;
+  line-height: 1.6;
+}
+
+.handoff-textarea:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
+.handoff-save-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.handoff-save-indicator {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.handoff-save-indicator.saved { color: #22c55e; }
+
+.handoff-report-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px;
+}
+
+.handoff-report-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-head);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.handoff-section {
+  margin-bottom: 12px;
+}
+
+.handoff-section-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.handoff-exc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.handoff-exc-row:last-child { border-bottom: none; }
+
+.handoff-exc-id {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.handoff-exc-detail {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  flex: 1;
+  color: var(--text);
+}
+
+.handoff-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.handoff-stat-item {
+  text-align: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.handoff-stat-val {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.handoff-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   POWER QUALITY (MDMS tab)
+   ============================================================ */
+
+.pq-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.pq-summary-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pq-stat-chip {
+  flex: 1;
+  min-width: 100px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.pq-stat-val {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pq-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.pq-voltage-gauge {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+}
+
+.pq-voltage-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.pq-voltage-bar-track {
+  height: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pq-voltage-bar-fill {
+  height: 100%;
+  transition: width 0.4s, background 0.4s;
+  border-radius: 3px;
+}
+
+.pq-voltage-val {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+.pq-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.pq-event-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.pq-event-type {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pq-type-VOLTAGE_SAG     { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.pq-type-VOLTAGE_SWELL   { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.pq-type-MOMENTARY_OUTAGE { background: rgba(239,68,68,0.12); color: #ef4444; }
+.pq-type-SUSTAINED_OUTAGE { background: rgba(185,28,28,0.15); color: #b91c1c; }
+
+.pq-event-ts {
+  color: var(--text-dim);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.pq-event-detail {
+  flex: 1;
+  color: var(--text);
+}
+
+.pq-no-events {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 24px;
+}
+
+/* ============================================================
+   ENHANCED STUDY — CHALLENGES
+   ============================================================ */
+
+.challenges-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.challenge-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.challenge-card.challenge-active {
+  border-color: var(--teal);
+}
+
+.challenge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.challenge-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-head);
+  flex: 1;
+}
+
+.challenge-timer {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  min-width: 50px;
+  text-align: right;
+}
+
+.challenge-timer.timer-urgent { color: #ef4444; }
+.challenge-timer.timer-warn   { color: #f59e0b; }
+
+.challenge-desc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.challenge-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.challenge-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  cursor: pointer;
+  transition: background 0.1s;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.challenge-check-item:hover { background: var(--bg-hover); }
+.challenge-check-item.item-done { opacity: 0.6; }
+
+.challenge-check-box {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+}
+
+.challenge-check-box.checked {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: white;
+}
+
+.challenge-btn-row {
+  display: flex;
+  gap: 6px;
+}
+
+.challenge-result-banner {
+  padding: 10px 14px;
+  border: 1px solid;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.challenge-result-pass { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.06); }
+.challenge-result-fail { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.06); }
+.challenge-result-timeout { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.06); }
