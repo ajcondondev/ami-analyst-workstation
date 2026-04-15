@@ -99,21 +99,9 @@ No backend, no API keys, no environment variables required. Fully self-contained
 |---|---|
 | Framework | React 19 + Vite 8 |
 | Charts | Recharts |
-| Styling | Custom CSS (no UI framework) — JetBrains Mono + IBM Plex Sans |
+| Styling | Custom CSS (no UI framework) 
 | Persistence | localStorage (no database) |
 | Data | 100% client-side generated fake data |
-
----
-
-## Aesthetic
-
-Industrial utility operations center aesthetic:
-- `#0d1117` near-black background
-- **JetBrains Mono** for all data values, IDs, readings
-- **IBM Plex Sans** for UI labels
-- Amber (`#f59e0b`) warnings, Green (`#22c55e`) healthy, Red (`#ef4444`) errors, Blue (`#3b82f6`) info
-- Dense, data-rich layouts — professional ops tool aesthetic, not a consumer app
-- Pulsing SVG animations for live meter alerts
 
 ---
 
