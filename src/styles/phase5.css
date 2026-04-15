@@ -1,0 +1,356 @@
+/* ============================================================
+   PHASE 5 — CIS SYSTEM
+   ============================================================ */
+
+.cis-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Stats bar */
+.cis-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+.cis-stat {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 1px solid var(--border);
+}
+.cis-stat:last-child { border-right: none; }
+
+.cis-stat-val {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-head);
+}
+
+.cis-stat-key {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+/* Body layout */
+.cis-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Left column */
+.cis-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.cis-search-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+
+.cis-search-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.cis-search-count {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.cis-browse-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cis-account-list {
+  flex: 1;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
+}
+
+.cis-account-row {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-dim);
+  cursor: pointer;
+  transition: background 0.1s;
+  border-left: 2px solid transparent;
+}
+.cis-account-row:hover { background: var(--bg-hover); }
+.cis-account-active { background: rgba(0,131,143,0.07) !important; border-left-color: var(--teal); }
+
+.cis-account-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.cis-account-name {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-head);
+}
+
+.cis-account-sub {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1px;
+}
+
+.cis-account-addr {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.cis-account-status { margin-top: 2px; }
+
+/* Right column */
+.cis-right {
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+.cis-no-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  gap: 8px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* Account detail */
+.cis-detail-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.cis-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(26,35,126,0.04);
+  border-bottom: 3px solid var(--navy);
+  flex-shrink: 0;
+}
+
+.cis-detail-name {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-head);
+}
+
+.cis-detail-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.cis-detail-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cis-meta-strip {
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cis-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 12px;
+  border-right: 1px solid var(--border);
+}
+.cis-meta-item:last-child { border-right: none; }
+
+.cis-meta-key {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.cis-meta-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text);
+}
+
+.cis-subtabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cis-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+/* Overview grid */
+.cis-overview-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cis-overview-section {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+}
+
+.cis-exc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.cis-forder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* Service timeline */
+.cis-service-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cis-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  padding: 8px 0;
+}
+
+.cis-timeline-icon {
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.cis-timeline-line {
+  position: absolute;
+  left: 14px;
+  top: 36px;
+  bottom: -8px;
+  width: 1px;
+  background: var(--border);
+}
+.cis-timeline-item:last-child .cis-timeline-line { display: none; }
+
+.cis-timeline-body { flex: 1; padding-top: 4px; }
+
+.cis-timeline-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cis-timeline-date {
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+/* FSO form */
+.cis-fso-form {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 14px;
+}
+
+.cis-fso-form-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Global FSO panel */
+.cis-fso-global {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+}
+
+/* Color utilities */
+.text-cyan   { color: #06b6d4 !important; }
+.text-purple { color: #a855f7 !important; }
