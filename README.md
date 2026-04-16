@@ -2,6 +2,9 @@
 
 A fully interactive simulation of the systems an **Advanced Metering Infrastructure (AMI) Exception Analyst** works with daily. Built as an educational tool for learning utility AMI operations.
 
+Live Demo:
+https://ami-analyst-workstationvercel.vercel.app/
+
 ---
 
 ## Screenshots
