@@ -1,22 +1,61 @@
+<div align="center">
+
 # AMI Analyst Workstation
 
-A fully interactive simulation of the systems an **Advanced Metering Infrastructure (AMI) Exception Analyst** works with daily. Built as an educational tool for learning utility AMI operations.
+**A fully interactive simulation of the systems an Advanced Metering Infrastructure (AMI) Exception Analyst works with daily.**  
+Built as an educational tool for learning utility AMI operations.
+
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![React](https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite_8-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Recharts](https://img.shields.io/badge/Recharts-22B5BF?style=flat-square&logoColor=white)
+![Data](https://img.shields.io/badge/Data-Client--Side_Simulated-f59e0b?style=flat-square)
+![Output](https://img.shields.io/badge/Output-Web_App-3b82f6?style=flat-square)
+![No Backend](https://img.shields.io/badge/Backend-None_Required-lightgrey?style=flat-square)
+
+</div>
 
 ---
 
-## Screenshots
+## 📸 Screenshots
+
+<div align="center">
 
 ![Dashboard](screenshots/dashboard.png)
 
 ![Exception Queue](screenshots/exceptions.png)
 
+</div>
+
 ---
 
-## What This Simulates
+## 🏗️ What This Simulates
 
 Real AMI analysts work across multiple interconnected systems: they monitor RF mesh networks, manage meter communication failures, run VEE pipelines, resolve billing exceptions, and coordinate field service responses — all under billing cycle deadlines.
 
 This app replicates that entire workflow in a self-contained frontend simulation:
+
+```
+  Smart Meters (×49)
+        │  RF Signal
+        ▼
+  Collector Nodes / DCUs (×5)
+        │  WAN
+        ▼
+  Head-End System (HES) ──────► Event Log
+        │
+        ▼
+  MDMS  (96 intervals · meter · day)
+        │
+        ▼
+  VEE Pipeline ────────────────► 7 Validation Rules
+        │                               │
+        ▼                               ▼
+   Clean Data                    Exception Queue
+        │                               │
+        ▼                        Resolution Workflow
+   Billing ◄──────────────────── (Retry · Estimate · Dispatch)
+```
 
 | Module | What It Does |
 |---|---|
@@ -31,46 +70,58 @@ This app replicates that entire workflow in a self-contained frontend simulation
 
 ---
 
-## Exception Types Simulated
+## ⚡ Exception Types Simulated
 
 All 8 exception types an AMI analyst encounters in production:
 
-- **Missing Read** — intervals not received within collection window
-- **Consumption Spike** — usage 3–10× above historical profile
-- **Zero Read on Active Account** — all intervals zero, non-solar
-- **Negative Consumption** — negative intervals on non-net-metering account
-- **Stale Data** — register unchanged across 3+ read cycles
-- **Communication Failure** — meter unreachable at HES
-- **Tamper Alert** — enclosure open / magnetic bypass event
-- **CT Ratio Mismatch** — programmed vs field-detected ratio mismatch (commercial meters)
+| Exception Type | Description |
+|---|---|
+| **Missing Read** | Intervals not received within the collection window |
+| **Consumption Spike** | Usage 3–10× above historical profile |
+| **Zero Read on Active Account** | All intervals zero, non-solar account |
+| **Negative Consumption** | Negative intervals on a non-net-metering account |
+| **Stale Data** | Register unchanged across 3+ read cycles |
+| **Communication Failure** | Meter unreachable at HES |
+| **Tamper Alert** | Enclosure open / magnetic bypass event |
+| **CT Ratio Mismatch** | Programmed vs. field-detected ratio mismatch (commercial meters) |
 
 ---
 
-## Simulation Engine
+## ⚙️ Simulation Engine
 
-A background timer drives the simulation (15 seconds real-time = 1 sim-hour × speed multiplier):
+A background timer drives the simulation — **15 seconds real-time = 1 sim-hour × speed multiplier**.
 
-- 1–3% of meters generate missing reads each cycle
-- Consumption spikes, zero reads, stale data, tamper alerts fire stochastically
-- Collectors can go offline and cascade failures to all downstream meters
-- RF signal strength drifts continuously with random walk
-- New exceptions enter the queue automatically
-- Speed controls: **Pause / 1× / 5× / 10×**
-- Full localStorage persistence — sim state survives page refresh
+> [!NOTE]
+> The simulation runs entirely in the browser. No data leaves the page — all meter state, exceptions, and audit history are generated and stored locally.
 
----
-
-## Data Model
-
-- **49 meters** across 3 neighborhoods: Springfield-West, Springfield-Central, Northampton
-- **5 collector nodes** (DCUs) with mesh health tracking
-- Rate classes: Residential, Commercial (with CT ratios), Solar (net metering)
-- Realistic daily load profiles: residential duck curve, commercial flat-peak, solar negative export 9am–4pm
-- Seeded customer names, account numbers, addresses, firmware versions, install dates
+| Behavior | Detail |
+|---|---|
+| Missing read rate | 1–3% of meters per cycle |
+| Stochastic events | Spikes, zero reads, stale data, tamper alerts fire randomly |
+| Cascading failures | Collectors can go offline, failing all downstream meters |
+| RF signal drift | Continuous random walk per meter |
+| Exception ingestion | New exceptions enter the queue automatically |
+| Speed controls | Pause · 1× · 5× · 10× |
+| Persistence | Full `localStorage` — sim state survives page refresh |
 
 ---
 
-## How To Run
+## 🗄️ Data Model
+
+> [!IMPORTANT]
+> All data is 100% client-side generated. There is no real meter data, no real customer PII, and no external API calls.
+
+| Entity | Detail |
+|---|---|
+| **Meters** | 49 meters across 3 neighborhoods: Springfield-West, Springfield-Central, Northampton |
+| **Collectors** | 5 DCUs with mesh health tracking |
+| **Rate classes** | Residential · Commercial (with CT ratios) · Solar (net metering) |
+| **Load profiles** | Residential duck curve · Commercial flat-peak · Solar negative export 9am–4pm |
+| **Seeded attributes** | Customer names, account numbers, addresses, firmware versions, install dates |
+
+---
+
+## 🚀 How To Run
 
 ```bash
 # Install dependencies
@@ -87,35 +138,57 @@ npm run build
 npm run preview
 ```
 
-**Requirements:** Node.js 18+ recommended.
-
-No backend, no API keys, no environment variables required. Fully self-contained client-side app.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | React 19 + Vite 8 |
-| Charts | Recharts |
-| Styling | Custom CSS (no UI framework) 
-| Persistence | localStorage (no database) |
-| Data | 100% client-side generated fake data |
+> [!TIP]
+> No backend, no API keys, no environment variables required. Fully self-contained client-side app. Node.js 18+ recommended.
 
 ---
 
-## Study Mode
+## 🛠️ Tech Stack
+
+| Layer | Technology | Notes |
+|---|---|---|
+| **Framework** | React 19 + Vite 8 | Component-based UI, HMR dev server |
+| **Charts** | Recharts | 96-interval area charts, trend lines |
+| **Styling** | Custom CSS (no UI framework) | JetBrains Mono + IBM Plex Sans |
+| **Persistence** | `localStorage` | No database — full sim state serialized client-side |
+| **Data** | 100% client-side generated | Seeded fake data, deterministic profiles |
+
+---
+
+## 🎨 Aesthetic
+
+Industrial utility operations center aesthetic — dense, data-rich, professional ops tool feel (not a consumer app).
+
+| Token | Value | Usage |
+|---|---|---|
+| Background | `#0d1117` | Near-black base |
+| Warning / Amber | `#f59e0b` | Active exceptions, alerts |
+| Healthy / Green | `#22c55e` | Good meter status, passing VEE |
+| Error / Red | `#ef4444` | Failures, tamper, comm loss |
+| Info / Blue | `#3b82f6` | Informational badges |
+| Data font | **JetBrains Mono** | All IDs, readings, interval values |
+| UI font | **IBM Plex Sans** | Labels, headings, nav |
+
+Pulsing SVG animations indicate live meter alerts on the RF mesh view.
+
+---
+
+## 📚 Study Mode
 
 An interactive reference for building AMI domain knowledge:
 
-- **Exception Guide**: For each of the 8 exception types — what it is, why it matters, common causes, when to use each resolution action, and an analyst study tip
-- **Glossary**: 26 AMI/utility terms defined in plain language
-- **Quiz**: 6 scenario-based questions (Beginner → Advanced), scored with answer explanations and localStorage score tracking
+> [!TIP]
+> Study Mode is self-contained — you can use it without running any simulation. It's a standalone reference guide for AMI concepts.
+
+| Section | Contents |
+|---|---|
+| **Exception Guide** | All 8 exception types — what it is, why it matters, common causes, resolution action guidance, analyst study tip |
+| **Glossary** | 26 AMI/utility terms defined in plain language |
+| **Quiz** | 6 scenario-based questions (Beginner → Advanced), scored with answer explanations and `localStorage` score tracking |
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 src/
@@ -144,7 +217,10 @@ src/
 
 ---
 
-## Purpose
+## 🎯 Purpose
+
+> [!IMPORTANT]
+> This project demonstrates working knowledge of real AMI analyst workflows — not just the UI, but the underlying domain logic: why exceptions occur, how they're triaged, and what each resolution action means for billing accuracy.
 
 This project demonstrates working knowledge of:
 
@@ -156,4 +232,12 @@ This project demonstrates working knowledge of:
 - CT ratio math and its billing impact on commercial accounts
 - The difference between data quality issues and physical meter failures
 
-> Built for anyone learning AMI utility operations and exception analysis workflows.
+---
+
+<div align="center">
+
+Built for anyone learning AMI utility operations and exception analysis workflows.
+
+*React · Vite · Recharts · No backend · Runs in the browser*
+
+</div>
