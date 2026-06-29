@@ -5,6 +5,8 @@
 **A fully interactive simulation of the systems an Advanced Metering Infrastructure (AMI) Exception Analyst works with daily.**  
 Built as an educational tool for learning utility AMI operations.
 
+**[Live demo](https://ajcondondev.github.io/ami-analyst-workstation/)**
+
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
 ![React](https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite_8-646CFF?style=flat-square&logo=vite&logoColor=white)
