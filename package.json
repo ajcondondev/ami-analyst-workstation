@@ -2,7 +2,7 @@
   "name": "ami-analyst-workstation",
   "private": true,
   "version": "1.0.0",
-  "description": "AMI Exception Analyst simulation and study app — Eversource Energy portfolio project",
+  "description": "AMI Exception Analyst simulation and study app",
   "type": "module",
   "scripts": {
     "dev": "vite",

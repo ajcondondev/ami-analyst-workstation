@@ -496,7 +496,7 @@ function QuizTab() {
         </div>
         <div className="quiz-done-label">{scores.correct} / {scores.total} correct</div>
         <div className="quiz-done-rating">
-          {pct >= 80 ? '✓ Ready for the job interview' : pct >= 60 ? '↻ Review exception guide and retry' : '⚠ Focus on the exception explanations above'}
+          {pct >= 80 ? '✓ Strong grasp of the material' : pct >= 60 ? '↻ Review exception guide and retry' : '⚠ Focus on the exception explanations above'}
         </div>
         <div className="quiz-history">
           {history.map((h, i) => (
